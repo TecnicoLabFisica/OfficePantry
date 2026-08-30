@@ -41,9 +41,7 @@
               "type": "file-explorer",
               "state": {
                 "sortOrder": "alphabetical",
-                "autoReveal": false,
-                "showSearch": false,
-                "searchQuery": ""
+                "autoReveal": false
               },
               "icon": "lucide-folder-closed",
               "title": "Files"
@@ -186,5 +184,8 @@
     }
   },
   "active": "8d49683e095c86c2",
-  "lastOpenFiles": []
+  "lastOpenFiles": [
+    "mambaf0nku9u10zw",
+    "environment.yaml"
+  ]
 }

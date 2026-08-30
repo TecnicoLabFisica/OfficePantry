@@ -1,0 +1,40 @@
+name: office-pantry
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.12
+  - pip
+
+  # Development
+  - git
+  - ipython
+  - pytest
+  - pytest-cov
+
+  # Code quality
+  - ruff
+
+  # pip packages
+  - pip:
+      # Backend
+      - fastapi
+      - "uvicorn[standard]"
+
+      # Database
+      - sqlalchemy
+      - alembic
+
+      # Authentication / security
+      - python-jose[cryptography]
+      - passlib[bcrypt]
+
+      # Configuration
+      - python-dotenv
+
+      # Form/file handling
+      - python-multipart
+
+      # Testing
+      - httpx

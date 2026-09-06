@@ -1,0 +1,32 @@
+# The ledger is usually edited through the GitHub web UI, from a phone or a
+# browser, with nothing in between. This workflow is the only thing that looks
+# at such a commit before the page starts serving it.
+name: checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Three packages rather than the whole environment.yaml: the site itself
+      # needs nothing installed, and CI only runs the helper scripts.
+      - run: pip install pytest ruff quickjs
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Tests
+        run: pytest -q
+
+      - name: Ledger
+        run: python tools/doctor.py --quiet

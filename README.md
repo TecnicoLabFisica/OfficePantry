@@ -144,9 +144,12 @@ python tools/doctor.py          # validates the ledger
 Opening the files directly with `file://` will not work — the pages fetch the
 CSVs, which needs a real HTTP server.
 
-`pytest` runs `assets/pantry.js` inside a JavaScript engine and checks the
-arithmetic against the real ledger, including that repeated small amounts do
-not drift the way float dollars would.
+`pytest` runs `assets/pantry.js` inside a JavaScript engine — the code that
+actually ships, not a Python reimplementation of it — and checks the arithmetic
+against a fixed ledger in `tests/conftest.py`, including that repeated small
+amounts do not drift the way float dollars would. The real ledger in `data/` is
+checked for consistency rather than for a particular total, so adding a real
+contribution never breaks the suite.
 
 ---
 
@@ -164,5 +167,7 @@ data/config.json        Form URLs, categories, monthly amount
 tools/make_qr.py        QR sticker generator
 tools/doctor.py         Ledger validator
 tests/test_ledger.py    Money maths tests
+tests/test_render.py    Page rendering tests
+tests/conftest.py       The fixed ledger the tests assert against
 Plan-Office-Pantry.md   Full design document
 ```

@@ -56,8 +56,8 @@ Full design: [[Plan-Office-Pantry]]
 >       step Apps Script cannot do; the published URL has to be copied by hand.
 > - [x] **Fill the two empty strings** in `data/config.json`: `suggestionFormUrl` and `suggestionSheetCsvUrl`. Until then the suggestions page explains itself instead of breaking.
 > - [x] **Replace the seed ledger.** The Juan / Carlos / Ana / Maria rows are examples. Real data goes in the same shape — see *Admin: recording money* in `README.md`.
-> - [ ] **Print the QR.** `python tools/make_qr.py --url <pages-url>`, then print `qr/print.html`.
-> - [ ] **Test on a phone.** Scan, read the balance, submit a suggestion, confirm both the sheet row and the notification email.
+> - [x] **Print the QR.** `python tools/make_qr.py --url <pages-url>`, then print `qr/print.html`.
+> - [x] **Test on a phone.** Scan, read the balance, submit a suggestion, confirm both the sheet row and the notification email.
 > - [ ] **Cold read.** Hand the phone to someone who has never seen it. A suggestion in under a minute, unassisted.
 > - [ ] **Decide whether to commit** the working tree.
 

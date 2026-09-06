@@ -170,4 +170,5 @@ tests/test_ledger.py    Money maths tests
 tests/test_render.py    Page rendering tests
 tests/conftest.py       The fixed ledger the tests assert against
 Plan-Office-Pantry.md   Full design document
+CLAUDE.md               Working notes for Claude Code
 ```

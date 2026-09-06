@@ -74,6 +74,18 @@ Rules that matter:
 - Never delete or edit a past row to correct a mistake — add a correcting row.
   The commit history is what makes the ledger trustworthy.
 
+Then check it:
+
+```bash
+python tools/doctor.py
+```
+
+A row like `2026-09-14,Water, snacks,drinks,9.00` — a comma that should have been
+quoted — does not break the page. It shifts the columns, the amount reads as zero,
+and the expense quietly disappears from the balance. `doctor.py` is what notices,
+and it runs on every push, so a bad edit made on github.com fails the checks rather
+than the ledger.
+
 The page updates within a minute of the commit.
 
 ---
@@ -125,6 +137,8 @@ conda activate office-pantry
 
 python -m http.server 8000     # then open http://localhost:8000
 pytest                          # checks the money maths in assets/pantry.js
+ruff check .
+python tools/doctor.py          # validates the ledger
 ```
 
 Opening the files directly with `file://` will not work — the pages fetch the
@@ -148,6 +162,7 @@ data/contributions.csv  Who paid in
 data/expenses.csv       What was bought
 data/config.json        Form URLs, categories, monthly amount
 tools/make_qr.py        QR sticker generator
+tools/doctor.py         Ledger validator
 tests/test_ledger.py    Money maths tests
 Plan-Office-Pantry.md   Full design document
 ```

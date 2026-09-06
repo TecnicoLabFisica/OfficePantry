@@ -4,6 +4,9 @@ __pycache__/
 .ruff_cache/
 .DS_Store
 
-.claude/
+# Claude Code: project config is tracked; machine-specific files are not.
+.claude/settings.local.json
+.claude/.headroom*
+
 .obsidian/
 .remember/

@@ -137,8 +137,12 @@ def test_missing_ledger_degrades_without_crashing(config_json):
     assert "Could not load" in slot(ctx, "data-history", "innerHTML")
 
 
-def test_suggestions_page_without_a_form_url_explains_itself(fixture_files):
-    ctx = run_page("initSuggestions", fixture_files)
+def test_suggestions_page_without_a_form_url_explains_itself(config_json):
+    """Blanks the URL rather than trusting data/config.json to be empty --
+    linking the real form is a data change, not a reason for a test to fail."""
+    cfg = json.loads(config_json)
+    cfg["suggestionFormUrl"] = ""
+    ctx = run_page("initSuggestions", {"data/config.json": json.dumps(cfg)})
     assert "not been linked yet" in slot(ctx, "data-form", "innerHTML")
 
 

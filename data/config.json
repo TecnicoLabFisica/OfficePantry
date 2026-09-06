@@ -3,8 +3,8 @@
   "monthlyContribution": 5.00,
   "currencySymbol": "$",
   "repoUrl": "https://github.com/TecnicoLabFisica/OfficePantry",
-  "suggestionFormUrl": "",
-  "suggestionSheetCsvUrl": "",
+  "suggestionFormUrl": "https://docs.google.com/forms/d/e/1FAIpQLSf1qa955k61q9Ar-q7eGzkwjCNeSyEnuu85DWbPOICkwyrNuw/viewform?embedded=true",
+  "suggestionSheetCsvUrl": "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5OPTTwscYTzm4tvJ0SPPcdQ-jKhCUOLiThKIrZQrHTPvCBOoTttUxh2t52rdZhAAkTN4QYo7Lsc9r/pub?gid=1363357244&single=true&output=csv",
   "categories": {
     "snacks":      { "label": "Snacks",      "emoji": "🍪" },
     "drinks":      { "label": "Drinks",      "emoji": "💧" },

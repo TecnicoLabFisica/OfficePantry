@@ -43,13 +43,19 @@ Full design: [[Plan-Office-Pantry]]
 ## Your tasks
 
 > [!todo] In order — the first one blocks everything else
-> - [ ] **Make the repository public.** `TecnicoLabFisica/OfficePantry` currently returns 404 unauthenticated. GitHub Pages will not publish from a private repository on the free plan. *Settings → General → Change visibility → Public.*
+> - [x] **Make the repository public.** `TecnicoLabFisica/OfficePantry` currently returns 404 unauthenticated. GitHub Pages will not publish from a private repository on the free plan. *Settings → General → Change visibility → Public.*
 >       This is also what makes the *first names only* rule load-bearing — worth deciding deliberately rather than by default.
-> - [ ] **Enable Pages.** *Settings → Pages → `main` / root.*
-> - [ ] **Create the Google Form.** Fields: product, category, optional first name. Turn on email-on-response.
-> - [ ] **Publish the response sheet.** *File → Share → Publish to web → CSV.*
-> - [ ] **Fill the two empty strings** in `data/config.json`: `suggestionFormUrl` and `suggestionSheetCsvUrl`. Until then the suggestions page explains itself instead of breaking.
-> - [ ] **Replace the seed ledger.** The Juan / Carlos / Ana / Maria rows are examples. Real data goes in the same shape — see *Admin: recording money* in `README.md`.
+> - [x] **Enable Pages.** *Settings → Pages → `main` / root.*
+> - [x] **Create the Google Form and its response sheet.** Paste the prompt in
+>       [[Prompt-Office-Pantry-Form]] into Gemini and run the script it gives back. It
+>       pins the two question titles and the five category options that `assets/pantry.js`
+>       matches on — get one wrong and the list renders blank with no error. Two fields
+>       only: the first-name field is dropped, because the page never shows it and the
+>       response CSV is public.
+> - [x] **Publish the response sheet.** *File → Share → Publish to web → CSV.* The one
+>       step Apps Script cannot do; the published URL has to be copied by hand.
+> - [x] **Fill the two empty strings** in `data/config.json`: `suggestionFormUrl` and `suggestionSheetCsvUrl`. Until then the suggestions page explains itself instead of breaking.
+> - [x] **Replace the seed ledger.** The Juan / Carlos / Ana / Maria rows are examples. Real data goes in the same shape — see *Admin: recording money* in `README.md`.
 > - [ ] **Print the QR.** `python tools/make_qr.py --url <pages-url>`, then print `qr/print.html`.
 > - [ ] **Test on a phone.** Scan, read the balance, submit a suggestion, confirm both the sheet row and the notification email.
 > - [ ] **Cold read.** Hand the phone to someone who has never seen it. A suggestion in under a minute, unassisted.

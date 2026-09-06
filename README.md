@@ -101,6 +101,10 @@ Settings → Pages → Source: *Deploy from a branch* → `main` / `/ (root)`.
 
 ### 2. Connect the suggestion form
 
+`Prompt-Office-Pantry-Form.md` holds a prompt that has Gemini write an Apps Script
+doing steps 1-3 in one run, with the exact strings `assets/pantry.js` matches on. By
+hand:
+
 1. Create a Google Form with fields **Product** and **Category**.
 2. Responses → *Get email notifications for new responses*, so you hear about
    suggestions without checking.

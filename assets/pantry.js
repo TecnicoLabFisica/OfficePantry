@@ -192,6 +192,14 @@ const Pantry = (() => {
     let cfg = {};
     try { cfg = await loadConfig(); } catch (e) { console.error(e); }
 
+    // The commit history of data/ is the audit trail the whole design leans on,
+    // so the link to it follows the repository rather than being pinned to the
+    // one this page was written for. The markup keeps a working fallback.
+    const repoLink = document.querySelector('[data-repo-link]');
+    if (repoLink && cfg.repoUrl) {
+      repoLink.href = `${String(cfg.repoUrl).replace(/\/+$/, '')}/commits/main/data`;
+    }
+
     let ledger;
     try {
       ledger = await loadLedger();

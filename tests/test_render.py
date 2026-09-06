@@ -20,9 +20,11 @@ quickjs = pytest.importorskip("quickjs", reason="quickjs is needed to run pantry
 
 HARNESS = """
 var SLOTS = {};
+var MARKUP_HREF = 'the href already in the markup';
 function El(){
   this.textContent = '';
   this.innerHTML = '';
+  this.href = MARKUP_HREF;
   this.classList = {toggle:function(){}, add:function(){}, remove:function(){}};
 }
 var document = {querySelector: function(sel){
@@ -148,3 +150,16 @@ def test_suggestions_page_embeds_a_configured_form(config_json):
     assert "<iframe" in html
     assert "docs.google.com/forms/d/e/ABC" in html
 
+
+def test_edit_history_link_follows_the_configured_repository(budget, config_json):
+    """The transparency link must not stay pinned to whatever repo it was
+    written for -- if the project moves, a 404 breaks the audit trail."""
+    expected = json.loads(config_json)["repoUrl"] + "/commits/main/data"
+    assert slot(budget, "data-repo-link", "href") == expected
+
+
+def test_edit_history_link_falls_back_when_repo_url_is_unset(config_json):
+    cfg = json.loads(config_json)
+    cfg.pop("repoUrl")
+    ctx = run_page("initBudget", {"data/config.json": json.dumps(cfg)})
+    assert slot(ctx, "data-repo-link", "href") == "the href already in the markup"

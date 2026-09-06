@@ -1,0 +1,14 @@
+{
+  "fundName": "Office Pantry",
+  "monthlyContribution": 5.00,
+  "currencySymbol": "$",
+  "suggestionFormUrl": "",
+  "suggestionSheetCsvUrl": "",
+  "categories": {
+    "snacks":      { "label": "Snacks",      "emoji": "🍪" },
+    "drinks":      { "label": "Drinks",      "emoji": "💧" },
+    "coffee":      { "label": "Coffee",      "emoji": "☕" },
+    "supplements": { "label": "Supplements", "emoji": "💊" },
+    "other":       { "label": "Other",       "emoji": "📦" }
+  }
+}

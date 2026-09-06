@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The money — Office Pantry</title>
+<meta name="theme-color" content="#b25f27">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<a class="backlink" href="index.html">‹ Office Pantry</a>
+
+<header class="masthead">
+  <h1>💰 The money</h1>
+  <p class="period" data-period></p>
+</header>
+
+<section class="balance-card">
+  <p class="balance-label">Available</p>
+  <p class="balance-amount" data-balance>…</p>
+  <p class="balance-note" data-balance-note>Loading the ledger…</p>
+</section>
+
+<section class="section">
+  <h2>This month</h2>
+  <div class="panel" data-month-summary>
+    <p class="state">Loading…</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Where the money has gone</h2>
+  <div class="panel" data-breakdown>
+    <p class="state">Loading…</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Every transaction</h2>
+  <div class="panel" data-history>
+    <p class="state">Loading…</p>
+  </div>
+</section>
+
+<p class="footnote">
+  The balance is added up from the list above, never typed in by hand.<br>
+  Every change is recorded in the
+  <a href="https://github.com/TecnicoLabFisica/OfficePantry/commits/main/data">edit history</a>.
+</p>
+
+<script src="assets/pantry.js"></script>
+<script>Pantry.initBudget();</script>
+</body>
+</html>

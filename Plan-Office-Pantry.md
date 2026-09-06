@@ -1,12 +1,40 @@
-
 🥨 Office Pantry
 
 «[!summary] Project
-A lightweight web application for managing a shared office snack and supplies fund.
+A shared office snack and supplies fund, run entirely from a static web page.
 
-Coworkers contribute a fixed monthly amount, currently $5, which is used to purchase snacks, drinks, and other office supplies.
+Coworkers contribute a fixed monthly amount, currently $5, which is used to buy
+snacks, drinks, and other office supplies.
 
-A single NFC sticker provides access to the application, where coworkers can suggest products, vote on suggestions, see the current budget, and review purchases.»
+A single QR sticker opens the page, where coworkers can see the current balance,
+review every transaction, and suggest what to buy next.»
+
+---
+
+0. Revision Note
+
+«[!important]
+This document replaced an earlier design built on FastAPI, SQLAlchemy, SQLite,
+user accounts, and an NFC sticker.
+
+No code from that design was ever written, so nothing was lost.»
+
+The change had one cause: there is no server to host an application on, and no
+appetite for maintaining one. Rather than shrink the old design, the project was
+rebuilt around that constraint.
+
+The constraint turned out to remove more work than it added:
+
+Removed| Reason
+Authentication, users, passwords| Reading is public; the only write is a form
+Database, ORM, migrations| Two CSV files
+Backend, API layer| Nothing to serve
+Monthly rollover logic| Balances sum every month at once
+Voting| Deferred; the admin picks from the list
+Notification system| Google Forms already emails on each response
+
+What survived is the principle that mattered: money is represented by
+transactions, never by a stored balance.
 
 ---
 
@@ -14,19 +42,12 @@ A single NFC sticker provides access to the application, where coworkers can sug
 
 The system should:
 
-- Provide a single NFC entry point to the application.
-- Allow coworkers to quickly suggest snacks, drinks, and other supplies.
-- Allow coworkers to vote on existing suggestions.
-- Track the shared office fund.
-- Display the current month's balance transparently.
-- Maintain a history of expenses.
+- Provide a single QR entry point.
+- Let coworkers suggest snacks, drinks, and supplies without logging in.
+- Display the current balance transparently.
+- Show a complete, auditable history of contributions and expenses.
 - Organize expenses by category.
-- Track monthly contributions.
-- Allow the administrator to record contributions manually.
-- Convert an approved purchase directly into an expense.
-- Automatically roll the account into a new month.
-- Provide a simple notification mechanism for the administrator when new suggestions are available.
-- Require authentication for users while keeping the interface simple.
+- Cost nothing to host and require no maintenance.
 
 The system should prioritize:
 
@@ -34,161 +55,119 @@ The system should prioritize:
 2. Transparency
 3. Low friction
 4. Maintainability
-5. Modularity
 
 ---
 
 2. Selected Features
 
 Feature| Decision
-NFC| One NFC sticker → web application
-Landing page| Dashboard + actions
-Suggestions| Suggestions + voting + status
-Budget| Monthly ledger + categories
+Entry point| One QR sticker → static web page
+Hosting| GitHub Pages, public repository
+Landing page| Balance + three actions
+Suggestions| Google Form, no login
+Voting| Not in the first version
+Budget| Transaction ledger + category breakdown
+Contributions| Administrator records them as CSV rows
+Authentication| None
 Receipts| Not included
-Contributions| Administrator records payments
-Authentication| User identification + accounts
-Purchasing| Purchase automatically creates expense
-Monthly accounts| Automatic rollover
 Statistics| Not included
-Notifications| Administrator notifications
-Backend| Python + FastAPI
-Database| SQLite
+Data store| CSV files in the repository
+Audit trail| Git history
 
 ---
 
-3. User Experience
+3. Architecture
 
-3.1 NFC
+The system splits along a single line: what can be read, and what must be
+written.
 
-The NFC sticker contains only the application's URL.
+┌──────────────┐
+│  QR sticker  │
+└──────┬───────┘
+       ▼
+┌──────────────────────┐        ┌──────────────────┐
+│     index.html       │───────►│   Google Form    │
+│  balance + actions   │        │   (no login)     │
+└──┬────────────────┬──┘        └────────┬─────────┘
+   │                │                    ▼
+   │                │           ┌──────────────────┐
+   │                └──────────►│  Google Sheet    │
+   │                            │  published CSV   │
+   │  suggestions.html ◄────────┘                  │
+   │                            └──────────────────┘
+   ▼
+┌──────────────────────┐
+│     budget.html      │
+└──────────┬───────────┘
+           ▼
+┌──────────────────────────────┐
+│  data/contributions.csv      │
+│  data/expenses.csv           │
+│  (admin edits; git = audit)  │
+└──────────────────────────────┘
 
-NFC sticker
+«[!important]
+GitHub Pages serves files. It cannot receive a submission.»
+
+This is the constraint that shapes everything. Every write must land somewhere
+that is not GitHub Pages:
+
+Write| Destination
+A suggestion| Google Form
+A contribution| CSV row, committed
+An expense| CSV row, committed
+
+---
+
+4. The QR Entry Point
+
+The QR code contains only the site URL.
+
+QR sticker
      │
      ▼
-https://office-pantry.example
+https://tecnicolabfisica.github.io/OfficePantry/
 
-The NFC should not contain application data or authentication information.
+«[!important]
+The QR is the entry point, not the application.»
 
-This allows the sticker to remain unchanged even if the application evolves.
+It holds no data and no authentication. The sticker stays valid however the site
+evolves, and the page remains perfectly usable typed in by hand.
+
+QR was chosen over NFC because it needs no programming, works from any phone
+camera, and costs nothing to reprint.
 
 ---
 
-3.2 Landing Page
-
-After tapping the NFC, the user reaches the main dashboard.
+5. Landing Page
 
 ┌──────────────────────────────────┐
 │          🥨 Office Pantry        │
 │                                  │
-│          August 2026             │
+│          September 2026          │
 │                                  │
-│       Available: $23.60         │
+│           Available              │
+│             $9.15                │
+│      $7.60 spent this month      │
 │                                  │
 │ ┌──────────────────────────────┐ │
 │ │ 💡 Suggest something         │ │
 │ └──────────────────────────────┘ │
-│                                  │
 │ ┌──────────────────────────────┐ │
-│ │ 🗳️ Vote on suggestions       │ │
+│ │ 📋 See suggestions           │ │
 │ └──────────────────────────────┘ │
-│                                  │
 │ ┌──────────────────────────────┐ │
-│ │ 💰 Check budget              │ │
-│ └──────────────────────────────┘ │
-│                                  │
-│ ┌──────────────────────────────┐ │
-│ │ 🛒 See purchases             │ │
+│ │ 💰 Check the money           │ │
 │ └──────────────────────────────┘ │
 └──────────────────────────────────┘
 
-The current balance should be immediately visible without requiring navigation.
+The balance is visible immediately, without navigation and without logging in.
 
 ---
 
-4. User Roles
+6. Suggestions
 
-The application has two conceptual roles.
-
-4.1 Coworker
-
-A coworker can:
-
-- Log in.
-- View the current budget.
-- View expenses.
-- View purchases.
-- Submit suggestions.
-- View suggestions.
-- Vote on suggestions.
-
-A coworker cannot:
-
-- Modify expenses.
-- Modify contributions.
-- Create purchases.
-- Change account balances.
-- Modify other users.
-- Access administrative functions.
-
----
-
-4.2 Administrator
-
-The administrator can additionally:
-
-- Manage coworkers.
-- Record monthly contributions.
-- Create expenses.
-- Create purchases.
-- Change suggestion status.
-- Convert suggestions into purchases.
-- Manage monthly accounts.
-- Receive notifications.
-- Correct erroneous records.
-
----
-
-5. Authentication
-
-Authentication will use user accounts rather than completely anonymous access.
-
-The initial implementation should prioritize simplicity.
-
-Possible workflow:
-
-NFC
- │
- ▼
-Landing page
- │
- ▼
-"Log in"
- │
- ▼
-User authentication
- │
- ▼
-Application
-
-The exact authentication mechanism should be selected during implementation.
-
-Potential options:
-
-- Username + password
-- Email + password
-- Magic link
-- OAuth
-
-For the initial implementation, avoid introducing an external authentication provider unless necessary.
-
----
-
-6. Suggestions Module
-
-6.1 Creating a Suggestion
-
-A coworker submits:
+A coworker taps «Suggest something» and reaches an embedded Google Form.
 
 Product:
 [_____________________]
@@ -196,883 +175,232 @@ Product:
 Category:
 [ Snacks ▼ ]
 
-[ Submit suggestion ]
+[ Submit ]
 
-Categories initially include:
+No account, no password, no app. The administrator receives an email for each
+response.
+
+Categories:
 
 - 🍪 Snacks
-- 🥤 Drinks
+- 💧 Drinks
 - ☕ Coffee
 - 💊 Supplements
 - 📦 Other
 
-The category list should be configurable later.
+The list is configurable in "data/config.json".
+
+Submitted suggestions are read back from the sheet's published CSV and listed
+below the form.
+
+«[!important]
+The live list is the one part of the system outside this repository's control.»
+
+If Google's published CSV cannot be fetched, the page shows a short message and
+the form above keeps working. The feature degrades; nothing breaks.
 
 ---
 
-6.2 Suggestion Lifecycle
+7. Voting
 
-Every suggestion has a status.
+Voting is deliberately absent from the first version.
 
-💡 Suggested
-      │
-      ▼
-🗳️ Voting
-      │
-      ▼
-🛒 To Buy
-      │
-      ▼
-✅ Bought
+Without accounts there is no way to prevent someone voting twice, and adding
+accounts would reintroduce the entire authentication layer this design exists to
+avoid.
 
-Possible statuses:
+For now the administrator chooses from the suggestion list.
 
-Status| Meaning
-"suggested"| Recently submitted
-"voting"| Available for voting
-"to_buy"| Selected for the next purchase
-"bought"| Already purchased
-"rejected"| Not going to be purchased
+If voting is wanted later, the natural form is a monthly poll — «pick your top
+three» — as a second Google Form. It needs no change to anything else.
 
 ---
 
-7. Voting Module
+8. The Money
 
-Coworkers can vote on suggestions.
+Two CSV files hold every transaction.
 
-Example:
+data/contributions.csv
 
-Current suggestions
+date,name,month,amount
+2026-09-01,Juan,2026-09,5.00
 
-🥜 Mixed nuts       👍 8
-🍫 Chocolate        👍 6
-🍪 Cookies          👍 4
-🧃 Juice            👍 2
+data/expenses.csv
 
-The system should prevent a user from voting multiple times on the same suggestion.
+date,description,category,amount
+2026-09-03,Mixed nuts,snacks,7.50
 
-The database should therefore associate:
+«[!important]
+Money is represented by transactions.»
 
-User ←→ Vote ←→ Suggestion
+There is no "current_balance" field anywhere. The browser derives it on every
+page load:
 
-rather than simply storing a vote counter.
-
-This allows the application to enforce:
-
-«One user can vote once per suggestion.»
+balance = Σ contributions − Σ expenses
 
 ---
 
-8. Budget Module
+9. No Monthly Rollover
 
-The budget page provides a transparent view of the shared fund.
+The earlier design carried a closing balance forward into each new month.
 
-Example:
+That machinery is gone. Because the balance sums every transaction ever
+recorded, the month boundary is not an event:
 
-AUGUST 2026
+- Nothing happens on the first of the month.
+- No opening balance is written anywhere.
+- Money cannot be double-counted by a rollover running twice.
 
-Contributions
-$60.00
-
-Expenses
-$36.40
-
-────────────────
-
-Remaining
-$23.60
-
-The budget should also provide the expense breakdown.
-
-🍪 Snacks       $14.25
-💧 Drinks       $15.65
-☕ Coffee        $6.50
+A month is a filter over the data, not a record in it.
 
 ---
 
-9. Expense Ledger
+10. Money Is Counted In Cents
 
-Every expense represents money leaving the shared fund.
+«[!important]
+Amounts become integer cents the moment they are parsed, and stay integers
+until they are displayed.»
 
-Example:
+Summing float dollars drifts:
 
-August 28
+0.10 + 0.20 + 0.10 + 0.10  ≠  0.50
 
-Water + snacks
-Drinks
--$14.75
-
-Each expense should contain at minimum:
-
-id
-date
-description
-category
-amount
-created_by
-
-Receipts are explicitly out of scope for the initial version.
+This page exists to be trusted about other people's money, so this is the one
+place a subtle bug would do real damage. It is covered by a test.
 
 ---
 
-10. Contributions Module
+11. Budget Page
 
-The administrator manually records contributions.
+AVAILABLE
+$9.15
 
-Example:
+This month
+Contributions in     +$20.00
+Spent                -$7.60
+Net this month       +$12.40
 
-August 2026
+Where the money has gone
+💧 Drinks        $14.75
+☕ Coffee         $8.50
+🍪 Snacks         $7.50
+📦 Other          $0.10
 
-Juan       $5.00   ✓
-Carlos     $5.00   ✓
-Ana        $5.00   ✓
-Maria      $5.00   ✓
+Every transaction
+September 4   Bag clips        -$0.10
+September 3   Mixed nuts       -$7.50
+September 3   Maria paid in    +$5.00
+...
 
-The system should track:
-
-- coworker
-- month
-- amount
-- date paid
-- administrator who recorded it
-
-The expected contribution amount should be configurable rather than hard-coded to "$5".
-
-monthly_contribution = $5.00
-
-This allows the amount to change in the future without changing the application logic.
+Every figure on this page is computed from the rows beneath it.
 
 ---
 
-11. Purchasing Module
+12. Transparency and the Audit Trail
 
-This module connects suggestions with the financial system.
+The ledger is a set of text files under version control. Every change is a
+commit: who changed it, when, and exactly which numbers moved.
 
-Example:
+«[!important]
+Corrections are made by adding a row, never by editing a past one.»
 
-Suggestion
-
-🥜 Mixed nuts
-8 votes
-
-[ Mark as "To Buy" ]
-
-After purchasing:
-
-Purchase
-
-🥜 Mixed nuts
-$7.50
-
-[ Confirm purchase ]
-
-Confirming the purchase should automatically:
-
-1. Create a purchase record.
-2. Create the corresponding expense.
-3. Associate the expense with the purchase.
-4. Change the suggestion status to "bought".
-
-Conceptually:
-
-Suggestion
-     │
-     ▼
-  To Buy
-     │
-     ▼
-  Purchase
-     │
-     ├──────────► Expense
-     │
-     ▼
-  Bought
-
-This prevents having to enter the same purchase twice.
+This is stronger than the database design it replaced. A spreadsheet cell can be
+silently overwritten; a committed row cannot.
 
 ---
 
-12. Monthly Accounts
+13. Privacy
 
-The system operates using monthly accounting periods.
+GitHub Pages publishes from a public repository on the free plan, so the ledger
+is readable by anyone.
 
-Example:
+«[!important]
+First names only. No surnames, no contact details.»
 
-July 2026
-────────────
-Opening balance
-+ Contributions
-- Expenses
-= Closing balance
-
-        ↓
-
-August 2026
-────────────
-Opening balance
-+ Contributions
-- Expenses
-= Closing balance
-
-The balance should automatically carry forward.
-
-Formula:
-
-closing_balance =
-    opening_balance
-    + contributions
-    - expenses
-
-Then:
-
-next_month.opening_balance =
-    previous_month.closing_balance
+"Juan paid in $5.00" is meaningful to the four people who share the fund and
+useless to anyone else.
 
 ---
 
-13. Monthly Rollover
-
-At the beginning of a new month, the application should create the new accounting period.
-
-Example:
-
-July 2026
-Closing balance: $12.50
-
-          ↓ rollover
-
-August 2026
-Opening balance: $12.50
-Contributions:   $60.00
-Expenses:        $36.40
-
-Current balance: $36.10
-
-The rollover process should be designed so that it cannot accidentally duplicate money.
-
-Prefer deriving balances from transactions rather than manually editing a balance field.
-
----
-
-14. Notifications
-
-Notifications are initially intended for the administrator.
-
-The first notification system can be deliberately simple.
-
-Example:
-
-🔔 New suggestions
-
-3 new suggestions have been submitted
-since your last visit.
-
-Possible notification events:
-
-- New suggestion
-- New vote activity
-- Low balance
-- New month
-- Unrecorded contribution
-
-The initial implementation does not need push notifications.
-
-A notification center inside the admin interface is sufficient.
-
----
-
-15. Admin Dashboard
-
-The administrator dashboard is the operational center of the application.
-
-Possible layout:
-
-ADMIN DASHBOARD
-
-Current balance
-$36.10
-
-────────────────────────
-
-🔔 Notifications
-3 new suggestions
-
-────────────────────────
-
-💡 Suggestions
-8 active
-
-🛒 To Buy
-4 items
-
-💰 Contributions
-10 / 12 paid
-
-────────────────────────
-
-Quick actions
-
-[ Add contribution ]
-[ Add expense ]
-[ Create purchase ]
-[ Manage suggestions ]
-[ Manage users ]
-
----
-
-16. Database
-
-The initial database will be:
-
-«SQLite»
-
-The application should access it through:
-
-«SQLAlchemy»
-
-This keeps the application independent of the underlying database implementation.
-
-The conceptual schema is:
-
-User
- │
- ├──── Contribution
- │
- ├──── Suggestion
- │        │
- │        └──── Vote
- │
- ├──── Expense
- │
- └──── Purchase
-          │
-          └──── Expense
-
-AccountMonth
-
----
-
-17. Initial Database Entities
-
-User
-
-User
-----
-id
-name
-username/email
-password_hash
-role
-active
-created_at
-
----
-
-Contribution
-
-Contribution
-------------
-id
-user_id
-account_month_id
-amount
-paid_at
-recorded_by
-created_at
-
----
-
-Suggestion
-
-Suggestion
-----------
-id
-user_id
-description
-category
-status
-created_at
-updated_at
-
----
-
-Vote
-
-Vote
-----
-id
-user_id
-suggestion_id
-created_at
-
-Constraint:
-
-UNIQUE(user_id, suggestion_id)
-
----
-
-Purchase
-
-Purchase
---------
-id
-suggestion_id
-description
-category
-amount
-purchased_at
-created_by
-
----
-
-Expense
-
-Expense
--------
-id
-account_month_id
-purchase_id
-description
-category
-amount
-date
-created_by
-
-A purchase-created expense should reference its purchase.
-
----
-
-AccountMonth
-
-AccountMonth
-------------
-id
-year
-month
-opening_balance
-created_at
-closed_at
-
-Constraint:
-
-UNIQUE(year, month)
-
----
-
-18. Backend Architecture
-
-The backend will use:
-
-«Python + FastAPI + SQLAlchemy + SQLite»
-
-Suggested structure:
+14. Repository Layout
 
 office-pantry/
 │
-├── app/
-│   ├── main.py
-│   │
-│   ├── api/
-│   │   ├── auth.py
-│   │   ├── suggestions.py
-│   │   ├── votes.py
-│   │   ├── budget.py
-│   │   ├── contributions.py
-│   │   ├── purchases.py
-│   │   └── admin.py
-│   │
-│   ├── models/
-│   │   ├── user.py
-│   │   ├── suggestion.py
-│   │   ├── vote.py
-│   │   ├── contribution.py
-│   │   ├── purchase.py
-│   │   ├── expense.py
-│   │   └── account.py
-│   │
-│   ├── schemas/
-│   │   └── ...
-│   │
-│   ├── services/
-│   │   ├── budget.py
-│   │   ├── purchases.py
-│   │   ├── suggestions.py
-│   │   └── accounts.py
-│   │
-│   └── database.py
+├── index.html              Balance + three actions
+├── budget.html             Balance, breakdown, full history
+├── suggestions.html        Embedded form + suggestion list
+│
+├── assets/
+│   ├── style.css           Mobile-first
+│   └── pantry.js           CSV parsing, money maths, rendering
+│
+├── data/
+│   ├── contributions.csv
+│   ├── expenses.csv
+│   └── config.json         Form URLs, categories, monthly amount
+│
+├── tools/
+│   └── make_qr.py          QR sticker generator
 │
 ├── tests/
+│   └── test_ledger.py      Money maths, run against pantry.js
 │
-├── frontend/
-│
-├── migrations/
-│
-├── .env
-├── .gitignore
-├── pyproject.toml
+├── .nojekyll               GitHub Pages serves the files as written
+├── environment.yaml
 └── README.md
 
-The API layer should remain thin.
-
-Business logic should live primarily in "services/".
+No build step, no framework, no dependencies in the browser.
 
 ---
 
-19. API Modules
+15. Testing
 
-The API should be organized around application features.
+The site needs nothing installed to run. The tests exist for one reason: the
+arithmetic handles other people's money.
 
-Example:
+"tests/test_ledger.py" runs "assets/pantry.js" inside a JavaScript engine and
+checks:
 
-/api/auth
-/api/suggestions
-/api/votes
-/api/budget
-/api/contributions
-/api/purchases
-/api/admin
+- Amounts parse to exact integer cents.
+- Formatting is correct across zero, negatives, and thousands.
+- CSV descriptions containing commas survive parsing.
+- The balance matches a hand-computed total of the real ledger.
+- Repeated small amounts do not drift.
 
-Possible endpoints:
-
-GET    /api/budget/current
-GET    /api/budget/expenses
-
-GET    /api/suggestions
-POST   /api/suggestions
-POST   /api/suggestions/{id}/vote
-
-GET    /api/purchases
-
-POST   /api/admin/contributions
-POST   /api/admin/expenses
-POST   /api/admin/purchases
-
-POST   /api/admin/suggestions/{id}/status
-
-The exact API design should be refined while implementing the modules.
+Testing the real source, rather than a Python reimplementation of it, is the
+point.
 
 ---
 
-20. Development Phases
-
-Phase 0 — Project Setup
-
-- [ ] Create Git repository
-- [ ] Create Python environment
-- [ ] Install FastAPI
-- [ ] Install SQLAlchemy
-- [ ] Configure SQLite
-- [ ] Create basic FastAPI application
-- [ ] Establish project structure
-- [ ] Configure testing
-- [ ] Create initial README
-
----
-
-Phase 1 — Database
-
-- [ ] Define SQLAlchemy models
-- [ ] Define relationships
-- [ ] Add constraints
-- [ ] Configure migrations
-- [ ] Create initial database
-- [ ] Write database tests
-
----
-
-Phase 2 — Authentication
-
-- [ ] Create users
-- [ ] Implement authentication
-- [ ] Implement sessions/tokens
-- [ ] Implement roles
-- [ ] Protect admin endpoints
-- [ ] Create initial admin account
-
----
-
-Phase 3 — Budget
-
-- [ ] Create monthly accounts
-- [ ] Implement contributions
-- [ ] Implement expenses
-- [ ] Calculate current balance
-- [ ] Implement expense categories
-- [ ] Implement monthly rollover
-- [ ] Add budget API
-
----
-
-Phase 4 — Suggestions
-
-- [ ] Create suggestions
-- [ ] Display suggestions
-- [ ] Implement categories
-- [ ] Implement statuses
-- [ ] Implement voting
-- [ ] Prevent duplicate votes
-- [ ] Add suggestion API
-
----
-
-Phase 5 — Purchasing
-
-- [ ] Create purchase workflow
-- [ ] Convert suggestion → purchase
-- [ ] Automatically create expense
-- [ ] Mark suggestion as bought
-- [ ] Display purchase history
-
----
-
-Phase 6 — Frontend
-
-- [ ] Create landing page
-- [ ] Create login page
-- [ ] Create budget view
-- [ ] Create suggestion interface
-- [ ] Create voting interface
-- [ ] Create purchase history
-- [ ] Create admin dashboard
-
----
-
-Phase 7 — NFC
-
-- [ ] Deploy application
-- [ ] Obtain permanent URL
-- [ ] Program NFC sticker
-- [ ] Test Android NFC
-- [ ] Test iPhone NFC
-- [ ] Place sticker in office
-- [ ] Test complete workflow
-
----
-
-Phase 8 — Notifications
-
-- [ ] Create notification model
-- [ ] Detect new suggestions
-- [ ] Detect relevant admin events
-- [ ] Create admin notification center
-- [ ] Add unread/read state
-
----
-
-21. MVP Definition
-
-The first usable release should contain:
-
-                🏢 OFFICE PANTRY
-                       │
-                       ▼
-                     NFC
-                       │
-                       ▼
-                 Web application
-                       │
-        ┌──────────────┼──────────────┐
-        ▼              ▼              ▼
-     Budget       Suggestions       Purchases
-        │              │              │
-        │              ▼              │
-        │            Voting            │
-        │              │              │
-        └──────────────┼──────────────┘
-                       ▼
-                    SQLite
-
-MVP must support
-
-- [ ] NFC → application
-- [ ] User authentication
-- [ ] User accounts
-- [ ] Suggestions
-- [ ] Voting
-- [ ] Suggestion statuses
-- [ ] Monthly contributions
-- [ ] Expenses
-- [ ] Budget calculation
-- [ ] Expense categories
-- [ ] Purchases
-- [ ] Purchase → expense automation
-- [ ] Monthly rollover
-- [ ] Admin dashboard
-
-Explicitly excluded from MVP
-
-- [ ] Receipt uploads
-- [ ] Statistics
-- [ ] Charts
-- [ ] Push notifications
-- [ ] Advanced analytics
-- [ ] Multiple NFC stickers
-- [ ] External payment integration
-
----
-
-22. Design Principles
-
-«[!important]
-The NFC is the entry point, not the application.»
-
-The application must remain useful even if users access it through a normal URL.
-
----
-
-«[!important]
-Money should be represented by transactions.»
-
-Avoid maintaining a manually editable:
-
-current_balance = $36.10
-
-Instead derive it from:
-
-opening balance
-+ contributions
-- expenses
-
-This makes the accounting auditable.
-
----
-
-«[!important]
-Purchases and expenses are related but conceptually different.»
-
-A purchase answers:
-
-«What did we buy?»
-
-An expense answers:
-
-«How much money left the fund?»
-
-Usually they correspond one-to-one, but keeping the concepts separate gives us flexibility later.
-
----
-
-«[!important]
-The public interface should be simple.»
-
-A coworker should be able to:
-
-Tap NFC
-   ↓
-Log in
-   ↓
-Suggest something
-   ↓
-Done
-
-in under a minute.
-
----
-
-23. Future Expansion
-
-These features are intentionally left outside the initial scope.
-
-📊 Statistics
-
-- Spending trends
-- Most popular products
-- Most purchased products
-- Spending by category
-- Monthly comparisons
-
-🧾 Receipts
-
-- Receipt images
-- Expense evidence
-- Receipt archive
-
-🔔 Advanced notifications
-
-- Push notifications
-- Email notifications
-- Low-balance alerts
-- Purchase notifications
-
-🗳️ Advanced voting
-
-- Weighted voting
-- Voting deadlines
-- Monthly polls
-- Automatic selection based on votes
-
-📱 Progressive Web App
-
-Eventually the application could become a PWA:
-
-NFC
- ↓
-Web app
- ↓
-"Add to home screen"
- ↓
-📱 Office Pantry
-
-🏢 Multiple funds
-
-The architecture could eventually support:
-
-Office Pantry
-     │
-     ├── Snacks
-     ├── Coffee
-     └── Supplies
-
-or even multiple independent offices/funds.
-
----
-
-24. Success Criteria
+16. Success Criteria
 
 The project is successful when:
 
-1. A coworker can tap the NFC and reach the application.
-2. They can authenticate without assistance.
-3. They can submit a suggestion in less than one minute.
-4. They can vote on suggestions.
-5. They can see exactly how much money is available.
-6. They can inspect the expense history.
-7. The administrator can record monthly contributions.
-8. A purchase can automatically become an expense.
-9. The monthly account rolls over correctly.
-10. The administrator can operate the entire system from the web interface.
+1. A coworker can scan the QR and reach the page.
+2. They see the available balance without logging in.
+3. They can submit a suggestion in under a minute.
+4. They can inspect every transaction that has ever occurred.
+5. The administrator can record a contribution or expense in one commit.
+6. A new month requires no action from anyone.
+7. Hosting costs nothing and requires no maintenance.
 
 ---
 
-25. First Implementation Target
+17. Future Expansion
 
-The first technical milestone should not be the NFC sticker.
+Left deliberately outside the current scope:
 
-Instead:
+🗳️ Voting
+- A monthly «pick your top three» form
 
-FastAPI
-   │
-   ├── SQLite
-   │
-   ├── SQLAlchemy
-   │
-   └── Basic web interface
-            │
-            ├── Login
-            ├── Budget
-            ├── Suggestions
-            └── Admin
+🧾 Receipts
+- Photographs linked to expense rows
 
-Once the application works locally:
+📊 Statistics
+- Spending trends, most-requested products
 
-Local application
-       ↓
-Deploy
-       ↓
-Permanent URL
-       ↓
-NFC sticker
-       ↓
-Real-world testing
+📱 Progressive Web App
+- «Add to home screen»
 
-This prevents the NFC layer from distracting from the actual application architecture.
+If the ledger ever outgrows hand-edited CSV, the next step is a Google Apps
+Script endpoint to append rows — still with no server to run.

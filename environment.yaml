@@ -1,3 +1,6 @@
+# The site itself is plain HTML/CSS/JS and needs nothing installed to run.
+# This environment is only for the helper scripts and the ledger tests.
+
 name: office-pantry
 
 channels:
@@ -16,25 +19,9 @@ dependencies:
   # Code quality
   - ruff
 
-  # pip packages
   - pip:
-      # Backend
-      - fastapi
-      - "uvicorn[standard]"
+      # QR sticker generation (tools/make_qr.py)
+      - "qrcode[pil]"
 
-      # Database
-      - sqlalchemy
-      - alembic
-
-      # Authentication / security
-      - python-jose[cryptography]
-      - passlib[bcrypt]
-
-      # Configuration
-      - python-dotenv
-
-      # Form/file handling
-      - python-multipart
-
-      # Testing
-      - httpx
+      # Runs assets/pantry.js so the money maths can be tested (tests/)
+      - quickjs

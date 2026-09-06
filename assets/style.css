@@ -1,0 +1,176 @@
+/* Office Pantry — mobile-first. The entry point is a phone held in one hand. */
+
+:root {
+  --bg: #fbf7f0;
+  --surface: #ffffff;
+  --border: #e8ded0;
+  --ink: #2a2320;
+  --ink-soft: #6d6259;
+  --accent: #b25f27;
+  --accent-soft: #fdf1e5;
+  --positive: #2f7a4d;
+  --negative: #b03a34;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(42, 35, 32, .06), 0 4px 14px rgba(42, 35, 32, .05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1613;
+    --surface: #241f1b;
+    --border: #3a322b;
+    --ink: #f2ece4;
+    --ink-soft: #a89c90;
+    --accent: #e08c4a;
+    --accent-soft: #33261a;
+    --positive: #6cc48c;
+    --negative: #e8756d;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 14px rgba(0, 0, 0, .25);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 1.5rem 1.1rem 3rem;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  max-width: 34rem;
+  margin-inline: auto;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ---------- header ---------- */
+
+.masthead { text-align: center; margin-bottom: 1.5rem; }
+.masthead h1 { font-size: 1.5rem; margin: 0; letter-spacing: -.02em; }
+.masthead .period { color: var(--ink-soft); font-size: .95rem; margin-top: .15rem; }
+
+.backlink {
+  display: inline-block;
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: .95rem;
+  margin-bottom: 1rem;
+}
+.backlink:hover { color: var(--accent); }
+
+/* ---------- balance ---------- */
+
+.balance-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.6rem 1rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.balance-label {
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--ink-soft);
+}
+.balance-amount {
+  font-size: 2.85rem;
+  font-weight: 650;
+  letter-spacing: -.03em;
+  margin: .2rem 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.balance-amount.is-negative { color: var(--negative); }
+.balance-note { font-size: .85rem; color: var(--ink-soft); margin-top: .35rem; }
+
+/* ---------- action buttons ---------- */
+
+.actions { display: grid; gap: .7rem; }
+.action {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  padding: 1.05rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 1.05rem;
+  font-weight: 500;
+  transition: transform .12s ease, border-color .12s ease;
+}
+.action:active { transform: scale(.985); }
+.action:hover { border-color: var(--accent); }
+.action .icon { font-size: 1.4rem; line-height: 1; }
+.action .arrow { margin-left: auto; color: var(--ink-soft); }
+.action.is-primary { background: var(--accent-soft); border-color: var(--accent); }
+
+/* ---------- generic sections ---------- */
+
+.section { margin-top: 2rem; }
+.section h2 {
+  font-size: .82rem;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--ink-soft);
+  margin: 0 0 .7rem;
+  font-weight: 600;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+/* ---------- rows ---------- */
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: .75rem;
+  padding: .85rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.row:last-child { border-bottom: none; }
+.row .row-main { flex: 1; min-width: 0; }
+.row .row-title { display: block; }
+.row .row-meta { display: block; font-size: .82rem; color: var(--ink-soft); margin-top: .1rem; }
+.row .amount { font-variant-numeric: tabular-nums; font-weight: 550; white-space: nowrap; }
+.row .amount.is-out { color: var(--negative); }
+.row .amount.is-in { color: var(--positive); }
+
+.row.is-total { background: var(--accent-soft); font-weight: 600; }
+
+/* category breakdown bar */
+.bar-track {
+  height: 5px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: .4rem;
+}
+.bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+
+/* ---------- states ---------- */
+
+.state { padding: 1.4rem 1rem; text-align: center; color: var(--ink-soft); font-size: .95rem; }
+.state.is-error { color: var(--negative); }
+.state a { color: var(--accent); }
+
+/* ---------- embedded form ---------- */
+
+.form-embed { width: 100%; border: 0; border-radius: var(--radius); background: var(--surface); }
+
+.footnote {
+  margin-top: 2.5rem;
+  text-align: center;
+  font-size: .82rem;
+  color: var(--ink-soft);
+}
+.footnote a { color: var(--accent); }

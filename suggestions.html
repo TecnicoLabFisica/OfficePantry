@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suggestions — Office Pantry</title>
+<meta name="theme-color" content="#b25f27">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<a class="backlink" href="index.html">‹ Office Pantry</a>
+
+<header class="masthead">
+  <h1>💡 Suggest something</h1>
+  <p class="period" data-period></p>
+</header>
+
+<section class="section">
+  <div data-form>
+    <p class="state">Loading the form…</p>
+  </div>
+</section>
+
+<section class="section" id="list">
+  <h2>Already suggested</h2>
+  <div class="panel" data-suggestions>
+    <p class="state">Loading…</p>
+  </div>
+</section>
+
+<p class="footnote">No login needed. Suggestions are reviewed when the next shop happens.</p>
+
+<script src="assets/pantry.js"></script>
+<script>Pantry.initSuggestions();</script>
+</body>
+</html>

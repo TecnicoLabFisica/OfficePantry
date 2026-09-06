@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Office Pantry</title>
+<meta name="description" content="Shared office snack fund — balance, spending and suggestions.">
+<meta name="theme-color" content="#b25f27">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <h1>🥨 Office Pantry</h1>
+  <p class="period" data-period></p>
+</header>
+
+<section class="balance-card">
+  <p class="balance-label">Available</p>
+  <p class="balance-amount" data-balance>…</p>
+  <p class="balance-note" data-balance-note>Loading the ledger…</p>
+</section>
+
+<nav class="actions">
+  <a class="action is-primary" href="suggestions.html">
+    <span class="icon">💡</span>
+    <span>Suggest something</span>
+    <span class="arrow">›</span>
+  </a>
+  <a class="action" href="suggestions.html#list">
+    <span class="icon">📋</span>
+    <span>See suggestions</span>
+    <span class="arrow">›</span>
+  </a>
+  <a class="action" href="budget.html">
+    <span class="icon">💰</span>
+    <span>Check the money</span>
+    <span class="arrow">›</span>
+  </a>
+</nav>
+
+<p class="footnote">Everyone chips in $5 a month. Every cent is listed on the money page.</p>
+
+<script src="assets/pantry.js"></script>
+<script>Pantry.initIndex();</script>
+</body>
+</html>

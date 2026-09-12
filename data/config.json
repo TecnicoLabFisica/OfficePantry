@@ -1,6 +1,7 @@
 {
   "fundName": "Office Pantry",
   "monthlyContribution": 5.00,
+  "members": ["Henry", "Nicole", "Daniel", "Juan", "Cristopher", "David"],
   "currencySymbol": "$",
   "repoUrl": "https://github.com/TecnicoLabFisica/OfficePantry",
   "suggestionFormUrl": "https://docs.google.com/forms/d/e/1FAIpQLSf1qa955k61q9Ar-q7eGzkwjCNeSyEnuu85DWbPOICkwyrNuw/viewform?embedded=true",

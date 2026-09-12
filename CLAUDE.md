@@ -10,7 +10,8 @@ No server, no database, no build step, no framework, no dependencies at runtime.
 conda activate office-pantry     # or: micromamba activate office-pantry
 pytest -q                        # runs assets/pantry.js in quickjs
 ruff check .
-python tools/doctor.py           # validates the ledger — run after any data/ edit
+python tools/doctor.py           # validates the ledger, says who still owes
+python tools/doctor.py --month 2026-08   # ask about a month that has passed
 python -m http.server 8000       # then open http://localhost:8000
 ```
 
@@ -50,7 +51,12 @@ These are load-bearing. Breaking one is a bug even when nothing fails.
   fixture in `tests/conftest.py` and pass `now=` to `run_page`. Asserting `"$9.15"` or
   a row count against `data/` means the first real contribution breaks the suite.
 - `data/config.json` holds anything deployment-specific (form URLs, `repoUrl`,
-  categories, currency). Do not hardcode those in the HTML or the JS.
+  categories, currency) and `members`, the roster of who chips in each month.
+  Do not hardcode those in the HTML or the JS.
+- **Somebody has paid when their rows for the month add up to
+  `monthlyContribution`**, not when a row exists. Payments arrive in parts, so two
+  rows for one person in one month are correct and `doctor.py` reports the
+  remainder. The roster never reaches a page — the repository is public.
 
 ## Layout
 

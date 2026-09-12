@@ -7,10 +7,17 @@ them. A malformed row does not raise an error in the browser -- it shifts the
 columns, the amount parses to zero, and the balance is quietly wrong. This script
 is what notices.
 
-    python tools/doctor.py           # report everything
-    python tools/doctor.py --quiet   # errors only, for CI
+It also answers the question the admin actually asks every month: who still owes.
+data/config.json lists the members who chip in, and their rows for the month are
+added up against monthlyContribution -- payments arrive in parts, so somebody
+having paid is a total, not the presence of a row.
 
-Exit status is 0 when there are no errors, 1 otherwise. Warnings never fail.
+    python tools/doctor.py                  # report everything
+    python tools/doctor.py --quiet          # errors only, for CI
+    python tools/doctor.py --month 2026-08  # ask about a month that has passed
+
+Exit status is 0 when there are no errors, 1 otherwise. Warnings never fail, and
+an unpaid contribution is neither -- it is a fact about the month.
 """
 
 import argparse
@@ -35,6 +42,9 @@ MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 
 REQUIRED_CONFIG_KEYS = ["fundName", "monthlyContribution", "currencySymbol",
                         "categories"]
+
+MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+          "August", "September", "October", "November", "December"]
 
 
 class Report:
@@ -82,6 +92,28 @@ def rel(path):
     return str(pathlib.Path(path).resolve().relative_to(ROOT))
 
 
+def money(cents, symbol="$"):
+    """Integer cents to text, the way assets/pantry.js formats it."""
+    sign = "-" if cents < 0 else ""
+    cents = abs(cents)
+    return f"{sign}{symbol}{cents // 100}.{cents % 100:02d}"
+
+
+def month_label(month):                  # "2026-09" -> "September 2026"
+    year, mon = month.split("-")
+    return f"{MONTHS[int(mon) - 1]} {year}"
+
+
+def current_month():
+    """This month where the office is, not where the clock keeps time.
+
+    UTC runs ahead of here, so on the evening of the last day of a month it has
+    already rolled over and would ask about a month nobody has started paying.
+    """
+    local = datetime.datetime.now(datetime.timezone.utc).astimezone()
+    return local.strftime("%Y-%m")
+
+
 def check_shape(path, header, rows, expected, report):
     """Header and field count. This is the check that catches the comma bug."""
     if header != expected:
@@ -123,22 +155,28 @@ def check_amount(where, value, report):
 
 
 def check_contributions(report):
+    """Validates every row. Returns (total_cents, [(line, name, month, cents)]).
+
+    The entries come back because who has paid is a question about several rows
+    at once, and the checks that ask it live below.
+    """
     path = DATA / "contributions.csv"
     result = read_rows(path, report)
     if result is None:
-        return 0
+        return 0, []
     header, rows = result
     if not check_shape(path, header, rows, CONTRIBUTIONS_HEADER, report):
-        return 0
+        return 0, []
 
     total = 0
-    seen = {}
+    entries = []
     for line_no, row in rows:
         where = f"{rel(path)}:{line_no}"
         date_str, name, month, amount = (c.strip() for c in row)
 
         parsed_date = check_date(where, date_str, report)
-        total += check_amount(where, amount, report)
+        cents = check_amount(where, amount, report)
+        total += cents
 
         if not name:
             report.error(where, "name is empty")
@@ -154,16 +192,9 @@ def check_contributions(report):
             report.error(where,
                          f"month {month!r} does not match date {date_str!r}")
 
-        key = (name.lower(), month)
-        if key in seen:
-            report.warn(where,
-                        f"{name} already has a {month} contribution on line "
-                        f"{seen[key]} -- add a correcting row if this is a "
-                        "duplicate, never delete one")
-        else:
-            seen[key] = line_no
+        entries.append((line_no, name, month, cents))
 
-    return total
+    return total, entries
 
 
 def check_expenses(report, categories):
@@ -197,18 +228,18 @@ def check_expenses(report, categories):
 
 
 def check_config(report):
-    """Returns the category keys, or an empty set if the config is unusable."""
+    """Returns the parsed config, or an empty dict if it is unusable."""
     path = DATA / "config.json"
     if not path.exists():
         report.error(rel(path), "file is missing")
-        return set()
+        return {}
 
     try:
         cfg = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         report.error(f"{rel(path)}:{exc.lineno}",
                      f"is not valid JSON ({exc.msg}) -- all three pages break")
-        return set()
+        return {}
 
     for key in REQUIRED_CONFIG_KEYS:
         if key not in cfg:
@@ -225,7 +256,142 @@ def check_config(report):
                     "repoUrl is empty -- the edit history link on budget.html "
                     "falls back to the URL hardcoded in the page")
 
-    return set(cfg.get("categories", {}))
+    return cfg
+
+
+def check_members(report, cfg):
+    """The monthly roster. Returns the names, or [] when there is none to use."""
+    where = rel(DATA / "config.json")
+    members = cfg.get("members")
+
+    if not members:
+        report.warn(where, "members is empty -- nobody is checked for the "
+                           "monthly contribution")
+        return []
+    if not isinstance(members, list) or not all(
+            isinstance(m, str) and m.strip() for m in members):
+        report.error(where, "members must be a list of first names -- any "
+                            "other shape checks nobody and says nothing")
+        return []
+
+    names = [m.strip() for m in members]
+    seen = set()
+    for name in names:
+        if " " in name:
+            report.error(where,
+                         f"member {name!r} looks like a full name -- first "
+                         "names only, this repository is public")
+        if name.lower() in seen:
+            report.warn(where, f"member {name!r} is listed twice")
+        seen.add(name.lower())
+    return names
+
+
+def check_contribution_amount(report, cfg):
+    """monthlyContribution as integer cents. 0 when it cannot be used."""
+    if "monthlyContribution" not in cfg:
+        return 0                          # already reported as missing above
+    value = cfg["monthlyContribution"]
+    if isinstance(value, bool) or not isinstance(value, (int, float)) \
+            or value <= 0:
+        report.error(rel(DATA / "config.json"),
+                     f"monthlyContribution {value!r} is not a positive number "
+                     "-- there is nothing to measure a month against")
+        return 0
+    return round(float(value) * 100)
+
+
+def month_totals(entries, month):
+    """What each name adds up to in one month.
+
+    Payments arrive in parts -- $3.00 now, the other $2.00 next week -- so a
+    person's standing for a month is the sum of their rows, never one of them.
+    Keyed by lowercased name, carrying the spelling used and the lines it came
+    from.
+    """
+    totals = {}
+    for line_no, name, row_month, cents in entries:
+        if row_month != month or not name:
+            continue
+        key = name.lower()
+        if key not in totals:
+            totals[key] = {"name": name, "cents": 0, "lines": []}
+        totals[key]["cents"] += cents
+        totals[key]["lines"].append(line_no)
+    return totals
+
+
+def check_overpayments(report, entries, cuota, symbol="$"):
+    """A month where somebody's rows add up to more than the contribution.
+
+    This replaces a plain duplicate-row check. Two rows for one person in one
+    month is how a split payment is recorded and is exactly right; what is worth
+    a second look is the total overshooting -- a payment entered twice, or 50.00
+    typed where 5.00 was meant.
+    """
+    path = DATA / "contributions.csv"
+    for month in sorted({m for _, _, m, _ in entries if MONTH_RE.match(m)}):
+        for info in month_totals(entries, month).values():
+            if info["cents"] <= cuota:
+                continue
+            lines = ", ".join(str(n) for n in info["lines"])
+            report.warn(
+                f"{rel(path)}:{info['lines'][-1]}",
+                f"{info['name']} adds up to {money(info['cents'], symbol)} for "
+                f"{month}, more than the {money(cuota, symbol)} contribution "
+                f"(line {lines}) -- add a correcting row if this is a double "
+                "entry, never delete one")
+
+
+def check_unknown_names(report, entries, members, month):
+    """Somebody paying this month who is not on the roster.
+
+    This is the check that catches a typo. 'Cristhopher' reads as one paid-up
+    stranger plus one member who never paid, and without the roster only the
+    second half of that is visible.
+
+    Deliberately limited to the month being checked: a one-off contributor in a
+    month gone by -- somebody handing over the last administration's float -- is
+    a permanent row, and a permanent warning nobody can clear is a warning
+    everybody learns to scroll past.
+    """
+    path = DATA / "contributions.csv"
+    known = {name.lower() for name in members}
+    for key, info in sorted(month_totals(entries, month).items()):
+        if key in known:
+            continue
+        report.warn(
+            f"{rel(path)}:{info['lines'][0]}",
+            f"{info['name']} paid for {month} but is not in the members list "
+            "in data/config.json -- check the spelling, or add them")
+
+
+def dues(entries, members, cuota, month):
+    """Who still owes for `month`, in roster order, as (name, paid_cents).
+
+    Not errors and not warnings. An unpaid contribution is a fact about the
+    month rather than a broken ledger -- on the first of the month everybody is
+    on this list and nothing at all is wrong.
+    """
+    totals = month_totals(entries, month)
+    return [(name, totals.get(name.lower(), {}).get("cents", 0))
+            for name in members
+            if totals.get(name.lower(), {}).get("cents", 0) < cuota]
+
+
+def print_dues(month, owing, members, cuota, symbol):
+    if not owing:
+        print(f"{month_label(month)} -- everyone has paid.")
+        return
+
+    outstanding = sum(cuota - paid for _, paid in owing)
+    print(f"{month_label(month)} -- {len(members) - len(owing)} of "
+          f"{len(members)} paid, {money(outstanding, symbol)} outstanding.")
+    width = max(len(name) for name, _ in owing)
+    for name, paid in owing:
+        state = (f"paid {money(paid, symbol)} of {money(cuota, symbol)}"
+                 if paid else "nothing yet")
+        print(f"  {name:<{width}}  {state}")
 
 
 def check_against_pantry_js(report, expected_cents):
@@ -266,18 +432,34 @@ def check_against_pantry_js(report, expected_cents):
     return actual
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--quiet", action="store_true",
                         help="print errors only")
-    args = parser.parse_args()
+    parser.add_argument("--month", metavar="YYYY-MM",
+                        default=current_month(),
+                        help="the month to check contributions for "
+                             "(default: the current one)")
+    args = parser.parse_args(argv)
+    if not MONTH_RE.match(args.month) or not 1 <= int(args.month[5:]) <= 12:
+        parser.error(f"--month {args.month!r} is not a YYYY-MM month")
 
     report = Report()
-    categories = check_config(report)
-    contributed = check_contributions(report)
+    cfg = check_config(report)
+    categories = set(cfg.get("categories", {}))
+    members = check_members(report, cfg)
+    cuota = check_contribution_amount(report, cfg)
+    symbol = cfg.get("currencySymbol") or "$"
+
+    contributed, entries = check_contributions(report)
     spent = check_expenses(report, categories)
+
+    if cuota:
+        check_overpayments(report, entries, cuota, symbol)
+    if members:
+        check_unknown_names(report, entries, members, args.month)
 
     balance = contributed - spent
     checked_by_js = None
@@ -297,12 +479,15 @@ def main():
         return 1
 
     if not args.quiet:
-        dollars = f"${balance // 100}.{balance % 100:02d}"
         via = "confirmed against assets/pantry.js" if checked_by_js is not None \
             else "quickjs not installed, page arithmetic not cross-checked"
-        print(f"\nLedger is clean. Balance {dollars} ({via}).")
+        print(f"\nLedger is clean. Balance {money(balance, symbol)} ({via}).")
+        if members and cuota:
+            print()
+            print_dues(args.month, dues(entries, members, cuota, args.month),
+                       members, cuota, symbol)
         if report.warnings:
-            print(f"{len(report.warnings)} warning(s) above are open to-do "
+            print(f"\n{len(report.warnings)} warning(s) above are open to-do "
                   "items, not failures.")
     return 0
 

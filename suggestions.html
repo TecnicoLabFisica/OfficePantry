@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Suggestions — Office Pantry</title>
-<meta name="theme-color" content="#b25f27">
+<meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -16,19 +17,25 @@
   <p class="period" data-period></p>
 </header>
 
-<section class="section" id="list">
-  <h2>Already suggested</h2>
-  <div class="panel" data-suggestions>
-    <p class="state">Loading…</p>
-  </div>
+<button class="pill" type="button" popovertarget="suggestions-sheet">
+  📋 See what's already suggested
+</button>
+
+<section class="form-card" id="form" data-form>
+  <p class="state">Loading the form…</p>
 </section>
 
-<section class="section" id="form">
-  <h2>Add your own</h2>
-  <div data-form>
-    <p class="state">Loading the form…</p>
+<aside class="sheet" id="suggestions-sheet" popover aria-labelledby="sheet-title">
+  <div class="sheet-grabber" aria-hidden="true"></div>
+  <header class="sheet-head">
+    <h2 id="sheet-title">Already suggested</h2>
+    <button class="sheet-close" type="button"
+            popovertarget="suggestions-sheet" popovertargetaction="hide">Done</button>
+  </header>
+  <div class="panel" id="list" data-suggestions>
+    <p class="state">Loading…</p>
   </div>
-</section>
+</aside>
 
 <p class="footnote">No login needed. Suggestions are reviewed when the next shop happens.</p>
 

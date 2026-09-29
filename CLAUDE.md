@@ -53,6 +53,11 @@ These are load-bearing. Breaking one is a bug even when nothing fails.
 - `data/config.json` holds anything deployment-specific (form URLs, `repoUrl`,
   categories, currency) and `members`, the roster of who chips in each month.
   Do not hardcode those in the HTML or the JS.
+- **Each member is `{"name", "from", "to"}`**, months as `YYYY-MM`. `to` is the last
+  month they pay for (inclusive), or `"active"` while they still pay. `doctor.py` only
+  expects a contribution in months inside that range, so a new member never owes for
+  months before they joined. `"oneTime": true` marks somebody who gave once and is
+  never counted as owing. When someone leaves, set `to`; never delete their entry.
 - **Somebody has paid when their rows for the month add up to
   `monthlyContribution`**, not when a row exists. Payments arrive in parts, so two
   rows for one person in one month are correct and `doctor.py` reports the

@@ -8,9 +8,12 @@ columns, the amount parses to zero, and the balance is quietly wrong. This scrip
 is what notices.
 
 It also answers the question the admin actually asks every month: who still owes.
-data/config.json lists the members who chip in, and their rows for the month are
-added up against monthlyContribution -- payments arrive in parts, so somebody
-having paid is a total, not the presence of a row.
+data/config.json lists the members who chip in, each with the months they belong
+to the fund -- {"name", "from", "to"}, where "to" is the last month they pay for
+or "active" -- so nobody is asked for a month before they joined or after they
+left. Their rows for the month are added up against monthlyContribution --
+payments arrive in parts, so somebody having paid is a total, not the presence of
+a row. A member marked "oneTime" gave once and is never asked for more.
 
     python tools/doctor.py                  # report everything
     python tools/doctor.py --quiet          # errors only, for CI
@@ -260,7 +263,13 @@ def check_config(report):
 
 
 def check_members(report, cfg):
-    """The monthly roster. Returns the names, or [] when there is none to use."""
+    """The monthly roster, as [{name, from, to, oneTime}], or [] when unusable.
+
+    Each member carries the months they belong to the fund. "to" is inclusive --
+    the last month they pay for -- or "active" while they still do. Without the
+    range, adding somebody in October would have them owing for September and
+    every month before it, permanently.
+    """
     where = rel(DATA / "config.json")
     members = cfg.get("members")
 
@@ -268,15 +277,42 @@ def check_members(report, cfg):
         report.warn(where, "members is empty -- nobody is checked for the "
                            "monthly contribution")
         return []
-    if not isinstance(members, list) or not all(
-            isinstance(m, str) and m.strip() for m in members):
-        report.error(where, "members must be a list of first names -- any "
-                            "other shape checks nobody and says nothing")
+    if not isinstance(members, list):
+        report.error(where, "members must be a list -- any other shape checks "
+                            "nobody and says nothing")
         return []
 
-    names = [m.strip() for m in members]
+    roster = []
     seen = set()
-    for name in names:
+    for entry in members:
+        if not isinstance(entry, dict) or not isinstance(entry.get("name"), str) \
+                or not entry["name"].strip():
+            report.error(where,
+                         f"member {entry!r} is not an entry -- use "
+                         '{"name": "Ana", "from": "YYYY-MM", "to": "active"}')
+            continue
+
+        name = entry["name"].strip()
+        start, end = entry.get("from"), entry.get("to")
+        one_time = entry.get("oneTime", False)
+        valid = True
+        if not isinstance(start, str) or not MONTH_RE.match(start):
+            report.error(where, f"member {name!r} has from {start!r} -- it "
+                                "must be the YYYY-MM month they started")
+            valid = False
+        if end != "active" and (not isinstance(end, str)
+                                or not MONTH_RE.match(end)):
+            report.error(where, f"member {name!r} has to {end!r} -- it must be "
+                                'the last YYYY-MM month they paid, or "active"')
+            valid = False
+        if valid and end != "active" and end < start:
+            report.error(where, f"member {name!r} ends in {end}, before they "
+                                f"start in {start}")
+        if not isinstance(one_time, bool):
+            report.error(where, f"member {name!r} has oneTime {one_time!r} -- "
+                                "it must be true or false")
+            one_time = False
+
         if " " in name:
             report.error(where,
                          f"member {name!r} looks like a full name -- first "
@@ -284,7 +320,25 @@ def check_members(report, cfg):
         if name.lower() in seen:
             report.warn(where, f"member {name!r} is listed twice")
         seen.add(name.lower())
-    return names
+        if valid:
+            roster.append({"name": name, "from": start, "to": end,
+                           "oneTime": one_time})
+    return roster
+
+
+def in_range(member, month):
+    """Whether `month` falls inside the months this member belongs to."""
+    return member["from"] <= month and (member["to"] == "active"
+                                        or month <= member["to"])
+
+
+def active_members(roster, month):
+    """The names expected to pay for `month`, in roster order.
+
+    A one-time contributor gave what they gave and is never expected to pay.
+    """
+    return [m["name"] for m in roster
+            if in_range(m, month) and not m["oneTime"]]
 
 
 def check_contribution_amount(report, cfg):
@@ -343,7 +397,7 @@ def check_overpayments(report, entries, cuota, symbol="$"):
                 "entry, never delete one")
 
 
-def check_unknown_names(report, entries, members, month):
+def check_unknown_names(report, entries, roster, month):
     """Somebody paying this month who is not on the roster.
 
     This is the check that catches a typo. 'Cristhopher' reads as one paid-up
@@ -356,7 +410,7 @@ def check_unknown_names(report, entries, members, month):
     everybody learns to scroll past.
     """
     path = DATA / "contributions.csv"
-    known = {name.lower() for name in members}
+    known = {m["name"].lower() for m in roster}
     for key, info in sorted(month_totals(entries, month).items()):
         if key in known:
             continue
@@ -364,6 +418,26 @@ def check_unknown_names(report, entries, members, month):
             f"{rel(path)}:{info['lines'][0]}",
             f"{info['name']} paid for {month} but is not in the members list "
             "in data/config.json -- check the spelling, or add them")
+
+
+def check_out_of_range(report, entries, roster):
+    """A member paying for a month outside the months they belong to the fund.
+
+    Unlike a stranger in a month gone by, this is always fixable -- the row's
+    month is wrong, or the roster's from/to is -- so every month is checked.
+    """
+    path = DATA / "contributions.csv"
+    by_name = {m["name"].lower(): m for m in roster}
+    for month in sorted({m for _, _, m, _ in entries if MONTH_RE.match(m)}):
+        for key, info in sorted(month_totals(entries, month).items()):
+            member = by_name.get(key)
+            if member is None or in_range(member, month):
+                continue
+            report.warn(
+                f"{rel(path)}:{info['lines'][0]}",
+                f"{info['name']} paid for {month} but their membership runs "
+                f"{member['from']} to {member['to']} in data/config.json -- "
+                "check the row's month, or the member's from/to")
 
 
 def dues(entries, members, cuota, month):
@@ -380,6 +454,10 @@ def dues(entries, members, cuota, month):
 
 
 def print_dues(month, owing, members, cuota, symbol):
+    if not members:
+        print(f"{month_label(month)} -- nobody on the roster pays for this "
+              "month.")
+        return
     if not owing:
         print(f"{month_label(month)} -- everyone has paid.")
         return
@@ -449,7 +527,7 @@ def main(argv=None):
     report = Report()
     cfg = check_config(report)
     categories = set(cfg.get("categories", {}))
-    members = check_members(report, cfg)
+    roster = check_members(report, cfg)
     cuota = check_contribution_amount(report, cfg)
     symbol = cfg.get("currencySymbol") or "$"
 
@@ -458,8 +536,9 @@ def main(argv=None):
 
     if cuota:
         check_overpayments(report, entries, cuota, symbol)
-    if members:
-        check_unknown_names(report, entries, members, args.month)
+    if roster:
+        check_unknown_names(report, entries, roster, args.month)
+        check_out_of_range(report, entries, roster)
 
     balance = contributed - spent
     checked_by_js = None
@@ -482,7 +561,8 @@ def main(argv=None):
         via = "confirmed against assets/pantry.js" if checked_by_js is not None \
             else "quickjs not installed, page arithmetic not cross-checked"
         print(f"\nLedger is clean. Balance {money(balance, symbol)} ({via}).")
-        if members and cuota:
+        if roster and cuota:
+            members = active_members(roster, args.month)
             print()
             print_dues(args.month, dues(entries, members, cuota, args.month),
                        members, cuota, symbol)

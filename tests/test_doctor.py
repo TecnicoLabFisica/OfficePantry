@@ -28,7 +28,8 @@ OTHER_MONTH = "2026-03"              # one they do not
 CONFIG = {
     "fundName": "Test Pantry",
     "monthlyContribution": 5.00,
-    "members": ["Alice", "Bob", "Cleo"],
+    "members": [{"name": name, "from": "2026-01", "to": "active"}
+                for name in ["Alice", "Bob", "Cleo"]],
     "currencySymbol": "$",
     "repoUrl": "https://example.invalid/pantry",
     "suggestionFormUrl": "https://example.invalid/form",
@@ -36,6 +37,16 @@ CONFIG = {
     # The keys conftest's EXPENSES uses; an unlisted category is an error.
     "categories": {"coffee": {}, "drinks": {}, "snacks": {}, "other": {}},
 }
+
+
+def member(name, start="2026-01", end="active", **extra):
+    """One roster entry, active from before either month the tests ask about."""
+    return dict({"name": name, "from": start, "to": end}, **extra)
+
+
+def roster(*extra):
+    """The fixture's three members plus whoever the test adds."""
+    return CONFIG["members"] + list(extra)
 
 
 def contributions(*paid):
@@ -154,7 +165,7 @@ def test_an_empty_roster_warns_and_checks_nobody(doctor_run):
 def test_a_full_name_on_the_roster_is_an_error(doctor_run):
     """Same rule as the ledger itself. The repository is public."""
     code, out = doctor_run(contributions(("Alice", MONTH, "5.00")),
-                           members=["Alice Fernandez"])
+                           members=[member("Alice Fernandez")])
     assert code == 1
     assert "first names only" in out
 
@@ -166,3 +177,95 @@ def test_the_month_asked_about_is_the_month_reported(doctor_run):
                            month=OTHER_MONTH)
     assert code == 0
     assert "March 2026 -- 1 of 3 paid" in out
+
+
+def test_a_member_who_starts_later_is_not_owing_yet(doctor_run):
+    """The reason the roster has dates: joining in October must not mean owing
+    for September and every month before it."""
+    code, out = doctor_run(contributions(("Alice", MONTH, "5.00"),
+                                         ("Bob", MONTH, "5.00"),
+                                         ("Cleo", MONTH, "5.00")),
+                           members=roster(member("Dana", start="2026-05")))
+    assert code == 0
+    assert "Dana" not in out
+    assert "everyone has paid" in out
+
+
+def test_a_member_owes_from_their_first_month(doctor_run):
+    code, out = doctor_run(contributions(("Alice", MONTH, "5.00"),
+                                         ("Bob", MONTH, "5.00"),
+                                         ("Cleo", MONTH, "5.00")),
+                           members=roster(member("Dana", start=MONTH)))
+    assert code == 0
+    assert "3 of 4 paid, $5.00 outstanding" in out
+    assert "Dana" in out and "nothing yet" in out
+
+
+def test_a_member_who_left_is_not_owing_afterwards(doctor_run):
+    code, out = doctor_run(contributions(("Alice", MONTH, "5.00"),
+                                         ("Bob", MONTH, "5.00"),
+                                         ("Cleo", MONTH, "5.00")),
+                           members=roster(member("Dana", end=OTHER_MONTH)))
+    assert code == 0
+    assert "Dana" not in out
+    assert "everyone has paid" in out
+
+
+def test_the_last_month_is_still_owed(doctor_run):
+    """"to" is the last month somebody pays for, not the first they do not."""
+    code, out = doctor_run(contributions(("Alice", MONTH, "5.00"),
+                                         ("Bob", MONTH, "5.00"),
+                                         ("Cleo", MONTH, "5.00")),
+                           members=roster(member("Dana", end=MONTH)))
+    assert code == 0
+    assert "3 of 4 paid" in out
+    assert "Dana" in out
+
+
+def test_a_one_time_contributor_is_never_owing(doctor_run):
+    """Somebody who chipped in $3.00 once gave what they meant to give."""
+    code, out = doctor_run(
+        contributions(("Alice", MONTH, "5.00"),
+                      ("Bob", MONTH, "5.00"),
+                      ("Cleo", MONTH, "5.00"),
+                      ("Dana", MONTH, "3.00")),
+        members=roster(member("Dana", MONTH, MONTH, oneTime=True)))
+    assert code == 0
+    assert "everyone has paid" in out
+    assert "warn" not in out
+
+
+def test_paying_outside_the_membership_warns(doctor_run):
+    code, out = doctor_run(
+        contributions(("Dana", OTHER_MONTH, "5.00"),
+                      ("Alice", MONTH, "5.00"),
+                      ("Bob", MONTH, "5.00"),
+                      ("Cleo", MONTH, "5.00"),
+                      ("Dana", MONTH, "5.00")),
+        members=roster(member("Dana", start=MONTH)))
+    assert code == 0
+    assert ("Dana paid for 2026-03 but their membership runs 2026-04 to "
+            "active") in out
+
+
+def test_nobody_active_in_the_month_says_so(doctor_run):
+    code, out = doctor_run(contributions(("Alice", MONTH, "5.00")),
+                           members=[member("Alice", start=MONTH)],
+                           month=OTHER_MONTH)
+    assert code == 0
+    assert "nobody on the roster pays for this month" in out
+
+
+@pytest.mark.parametrize("entry", [
+    "Alice",                                         # the old plain-name shape
+    {"name": "Alice"},                               # no months at all
+    member("Alice", start="2026-4"),
+    member("Alice", end="soon"),
+    member("Alice", start=MONTH, end=OTHER_MONTH),   # ends before it starts
+    member("Alice", oneTime="yes"),
+])
+def test_a_malformed_roster_entry_is_an_error(doctor_run, entry):
+    code, out = doctor_run(contributions(("Alice", MONTH, "5.00")),
+                           members=[entry])
+    assert code == 1
+    assert "config.json" in out

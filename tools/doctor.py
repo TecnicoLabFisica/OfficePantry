@@ -189,11 +189,16 @@ def check_contributions(report):
                 f"name {name!r} looks like a full name -- first names only, "
                 "this repository is public")
 
+        # A later month is a payment in advance and is fine -- see
+        # print_advance(). An earlier one is a typo until a late-payment rule
+        # exists.
         if not MONTH_RE.match(month):
             report.error(where, f"month {month!r} is not YYYY-MM")
-        elif parsed_date and month != date_str[:7]:
+        elif parsed_date and month < date_str[:7]:
             report.error(where,
-                         f"month {month!r} does not match date {date_str!r}")
+                         f"month {month!r} is before date {date_str!r} -- a "
+                         "contribution is for the month it was paid in, or a "
+                         "later one when paid in advance")
 
         entries.append((line_no, name, month, cents))
 
@@ -472,6 +477,31 @@ def print_dues(month, owing, members, cuota, symbol):
         print(f"  {name:<{width}}  {state}")
 
 
+def advance(entries, month):
+    """Money already in for months after `month`, as (month, name, cents).
+
+    Not a fault either. It is already in the balance, and it counts toward its
+    own month when that month comes -- until then it is worth seeing, because a
+    year typed wrong ("2027-10" for "2026-10") shows up here first.
+    """
+    return [(later, info["name"], info["cents"])
+            for later in sorted({m for _, _, m, _ in entries
+                                 if MONTH_RE.match(m) and m > month})
+            for _, info in sorted(month_totals(entries, later).items())]
+
+
+def print_advance(paid_ahead, symbol):
+    if not paid_ahead:
+        return
+    total = sum(cents for _, _, cents in paid_ahead)
+    print(f"\nPaid in advance -- {money(total, symbol)} already in the "
+          "balance for later months.")
+    width = max(len(name) for _, name, _ in paid_ahead)
+    for month, name, cents in paid_ahead:
+        print(f"  {name:<{width}}  {money(cents, symbol)} for "
+              f"{month_label(month)}")
+
+
 def check_against_pantry_js(report, expected_cents):
     """Re-derive the balance with assets/pantry.js and compare.
 
@@ -566,6 +596,7 @@ def main(argv=None):
             print()
             print_dues(args.month, dues(entries, members, cuota, args.month),
                        members, cuota, symbol)
+        print_advance(advance(entries, args.month), symbol)
         if report.warnings:
             print(f"\n{len(report.warnings)} warning(s) above are open to-do "
                   "items, not failures.")

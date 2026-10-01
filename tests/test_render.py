@@ -167,3 +167,37 @@ def test_edit_history_link_falls_back_when_repo_url_is_unset(config_json):
     cfg.pop("repoUrl")
     ctx = run_page("initBudget", {"data/config.json": json.dumps(cfg)})
     assert slot(ctx, "data-repo-link", "href") == "the href already in the markup"
+
+
+@pytest.fixture(scope="module")
+def paid_ahead(fixture_files):
+    """The fixture plus Cleo paying in April for May."""
+    files = dict(fixture_files)
+    files["data/contributions.csv"] += "2026-04-20,Cleo,2026-05,5.00\n"
+    return files
+
+
+def test_an_advance_payment_is_tagged_in_the_history(paid_ahead):
+    ctx = run_page("initBudget", paid_ahead)
+    html = slot(ctx, "data-history", "innerHTML")
+    assert html.count("In advance") == 1
+    assert "for May 2026" in html
+    assert slot(ctx, "data-balance") == "$17.15"
+
+
+def test_money_paid_ahead_is_noted_but_kept_out_of_the_month(paid_ahead):
+    html = slot(run_page("initBudget", paid_ahead), "data-month-summary",
+                "innerHTML")
+    assert "Paid ahead" in html and "$5.00" in html
+    assert "+$15.00" in html          # April's contributions, unchanged
+
+
+def test_nothing_is_ahead_once_its_month_comes(paid_ahead):
+    html = slot(run_page("initBudget", paid_ahead, now="2026-05"),
+                "data-month-summary", "innerHTML")
+    assert "Paid ahead" not in html
+    assert "+$5.00" in html
+
+
+def test_no_advance_note_without_advance_payments(budget):
+    assert "Paid ahead" not in slot(budget, "data-month-summary", "innerHTML")

@@ -214,6 +214,9 @@ const Pantry = (() => {
     const monthKey = currentMonthKey();
     const inThisMonth = sum(ledger.contributions.filter(c => c.month === monthKey));
     const outThisMonth = sum(ledger.expenses.filter(e => e.month === monthKey));
+    // Paid in advance: already in the balance, counted toward its own month
+    // when that month comes, so it stays out of this month's net.
+    const inAhead = sum(ledger.contributions.filter(c => c.month > monthKey));
 
     if (amountEl) showBalance(amountEl, balance(ledger), 'Carried across every month');
 
@@ -230,7 +233,14 @@ const Pantry = (() => {
         <div class="row is-total">
           <div class="row-main"><span class="row-title">Net this month</span></div>
           <span class="amount">${money(inThisMonth - outThisMonth)}</span>
-        </div>`;
+        </div>${inAhead ? `
+        <div class="row is-note">
+          <div class="row-main">
+            <span class="row-title">Paid ahead</span>
+            <span class="row-meta">Already in the balance, for months still to come</span>
+          </div>
+          <span class="amount">${money(inAhead)}</span>
+        </div>` : ''}`;
     }
 
     if (catEl) {
@@ -254,10 +264,14 @@ const Pantry = (() => {
 
     if (histEl) {
       const entries = [
-        ...ledger.contributions.map(c => ({
-          date: c.date, title: `${c.name} paid in`, meta: monthLabel(c.month),
-          cents: c.cents, dir: 'in',
-        })),
+        ...ledger.contributions.map(c => {
+          const ahead = c.month > String(c.date).slice(0, 7);
+          return {
+            date: c.date, title: `${c.name} paid in`,
+            meta: ahead ? `for ${monthLabel(c.month)}` : monthLabel(c.month),
+            tag: ahead ? 'In advance' : '', cents: c.cents, dir: 'in',
+          };
+        }),
         ...ledger.expenses.map(e => {
           const meta = (cfg.categories || {})[e.category] || {};
           return {
@@ -271,7 +285,7 @@ const Pantry = (() => {
       histEl.innerHTML = entries.length ? entries.map(e => `
         <div class="row">
           <div class="row-main">
-            <span class="row-title">${escapeHtml(e.title)}</span>
+            <span class="row-title">${escapeHtml(e.title)}${e.tag ? ` <span class="tag">${escapeHtml(e.tag)}</span>` : ''}</span>
             <span class="row-meta">${escapeHtml(dayLabel(e.date))} · ${escapeHtml(e.meta)}</span>
           </div>
           <span class="amount is-${e.dir}">${e.dir === 'in' ? '+' : '-'}${money(e.cents)}</span>

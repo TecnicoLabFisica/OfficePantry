@@ -269,3 +269,36 @@ def test_a_malformed_roster_entry_is_an_error(doctor_run, entry):
                            members=[entry])
     assert code == 1
     assert "config.json" in out
+
+
+LATER_MONTH = "2026-05"              # one still to come
+
+
+def test_paying_in_advance_is_listed_not_an_error(doctor_run):
+    """Paid in April for May: in the balance now, owed nothing until May."""
+    rows = contributions(("Alice", MONTH, "5.00"),
+                         ("Bob", MONTH, "5.00"),
+                         ("Cleo", MONTH, "5.00"))
+    rows += f"{MONTH}-20,Cleo,{LATER_MONTH},5.00\n"
+    code, out = doctor_run(rows)
+    assert code == 0
+    assert "everyone has paid" in out
+    assert "Paid in advance -- $5.00 already in the balance" in out
+    assert "Cleo  $5.00 for May 2026" in out
+
+
+def test_an_advance_payment_counts_toward_its_own_month(doctor_run):
+    rows = f"{MONTH}-20,Cleo,{LATER_MONTH},5.00\n"
+    code, out = doctor_run("date,name,month,amount\n" + rows,
+                           month=LATER_MONTH)
+    assert code == 0
+    assert "May 2026 -- 1 of 3 paid" in out
+    assert "Paid in advance" not in out       # May has come, nothing is ahead
+
+
+def test_a_month_before_the_payment_date_is_an_error(doctor_run):
+    """Paid in May for April is not a rule yet, so it is most likely a typo."""
+    code, out = doctor_run(
+        f"date,name,month,amount\n{LATER_MONTH}-02,Alice,{MONTH},5.00\n")
+    assert code == 1
+    assert "month '2026-04' is before date '2026-05-02'" in out

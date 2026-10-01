@@ -209,6 +209,21 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .row.is-total { font-weight: 600; }
 .row.is-total + .row::before,
 .row + .row.is-total::before { left: 0; }
+.row.is-note .row-title,
+.row.is-note .amount { color: var(--ink-soft); }
+
+/* a small capsule beside a row title, e.g. "In advance" */
+.tag {
+  display: inline-block;
+  margin-left: .35rem;
+  padding: .1rem .5rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: .72rem;
+  font-weight: 600;
+  vertical-align: .1em;
+}
 
 /* category breakdown bar */
 .bar-track {

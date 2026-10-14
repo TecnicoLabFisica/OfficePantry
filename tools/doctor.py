@@ -113,7 +113,7 @@ def current_month():
     UTC runs ahead of here, so on the evening of the last day of a month it has
     already rolled over and would ask about a month nobody has started paying.
     """
-    local = datetime.datetime.now(datetime.timezone.utc).astimezone()
+    local = datetime.datetime.now(datetime.UTC).astimezone()
     return local.strftime("%Y-%m")
 
 

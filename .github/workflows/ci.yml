@@ -20,7 +20,7 @@ jobs:
 
       # Three packages rather than the whole environment.yaml: the site itself
       # needs nothing installed, and CI only runs the helper scripts.
-      - run: pip install pytest ruff quickjs
+      - run: pip install pytest ruff==0.17.0 quickjs
 
       - name: Lint
         run: ruff check .

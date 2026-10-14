@@ -17,7 +17,7 @@ dependencies:
   - pytest-cov
 
   # Code quality
-  - ruff
+  - ruff=0.17.0
 
   - pip:
       # QR sticker generation (tools/make_qr.py)

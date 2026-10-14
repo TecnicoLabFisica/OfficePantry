@@ -1,0 +1,3 @@
+# Matches python=3.12 in environment.yaml and the CI workflow, so ruff
+# judges the code the same way locally and in CI.
+target-version = "py312"

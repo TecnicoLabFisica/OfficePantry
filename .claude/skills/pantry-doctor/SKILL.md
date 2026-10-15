@@ -17,8 +17,8 @@ ruff check .
 ```
 
 `doctor.py` reports `file:line: what is wrong`, exits 1 on errors and 0 on warnings.
-Warnings about `suggestionFormUrl` / `suggestionSheetCsvUrl` being empty are open
-setup tasks in `Status-Office-Pantry.md`, not faults.
+Both suggestion URLs are set in `data/config.json`, so a warning that either is empty
+means it was cleared by mistake.
 
 ## Symptom to cause
 
@@ -40,8 +40,8 @@ setup tasks in `Status-Office-Pantry.md`, not faults.
 
 The Python and JavaScript sums agree (`doctor.py` cross-checks them via quickjs) and
 every row parses. Then the ledger is right and the *data* is wrong: a payment was
-never recorded, or was recorded twice. Check `doctor.py` warnings for a duplicate
-name+month, then read `git log -p data/`.
+never recorded, or was recorded twice. Check `doctor.py` for a warning that someone's
+month adds up to more than the contribution, then read `git log -p data/`.
 
 ## Never
 

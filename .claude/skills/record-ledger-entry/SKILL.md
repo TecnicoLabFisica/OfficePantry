@@ -15,7 +15,9 @@ Append to `data/contributions.csv`:
 2026-09-14,Ana,2026-09,5.00
 ```
 
-`date,name,month,amount`. `month` must equal the first seven characters of `date`.
+`date,name,month,amount`. `month` is the month being paid for: the month of `date`,
+or a later one when somebody pays in advance. A payment in parts is one row per part,
+all with the same `month`.
 
 ## Something was bought
 

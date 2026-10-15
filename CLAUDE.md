@@ -20,7 +20,7 @@ python -m http.server 8000       # then open http://localhost:8000
 ## How a page works
 
 `assets/pantry.js` is one IIFE assigning `const Pantry`, exposing a single `init*` per
-page. Each HTML file ends with `<script>Pantry.initBudget()</script>` and marks its
+page. Each HTML file ends with its own call (`budget.html`: `<script>Pantry.initBudget()</script>`) and marks its
 slots with data attributes (`[data-balance]`, `[data-history]`, `[data-repo-link]`)
 that the init function fills. Adding a page means adding an `init*` and its attributes,
 not a router.
@@ -82,3 +82,11 @@ Status-Office-Pantry.md                   open setup tasks that are the admin's 
 
 `pantry-doctor` for diagnosing a live problem, `record-ledger-entry` for adding money
 correctly. The `ledger-auditor` agent reviews a `data/` diff before it is committed.
+
+## Model roles
+
+Model roles: the main Opus session reviews, analyzes, plans, orchestrates and reasons. Building, coding, fixing
+and implementing go to subagents dispatched with `model: "sonnet"`. Give each one a self-contained brief: the goal,
+the files involved, the invariants above that apply, and how to verify the work (which tests to run). Review its diff
+before accepting it. Small edits (a typo, a one-line fix, a docs or config tweak) Opus makes directly, because
+briefing an agent would cost more than the edit. The read-only reviewers above stay on Opus.

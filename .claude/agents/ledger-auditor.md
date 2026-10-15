@@ -2,7 +2,7 @@
 name: ledger-auditor
 description: Reviews an uncommitted or proposed change under data/ for silent money corruption and privacy leaks before it is committed. Use whenever data/contributions.csv, data/expenses.csv or data/config.json has been modified.
 tools: Bash, Read, Grep, Glob
-model: sonnet
+model: opus
 ---
 
 You audit changes to the Office Pantry ledger. The site derives real money from these
@@ -24,13 +24,16 @@ You are read-only. Report; do not edit.
      history of `data/` is the audit trail the site promises, and rewriting it breaks
      that promise even when the arithmetic still works. Corrections belong in a new row.
    - **Does the change make sense as money?** An expense far outside the usual range, a
-     contribution that is not the configured `monthlyContribution`, a date in the
-     future, a description that does not describe a purchase.
+     contribution whose month total overshoots `monthlyContribution` (part-payments and
+     months paid in advance are normal), a date in the future, a description that does
+     not describe a purchase.
    - **Privacy.** Any last name, email, phone number, or handle in a name or description
      field. The repository is public. `doctor.py` catches names with spaces; it will not
      catch `AnaGomez` or a surname used alone.
-   - **Duplicates.** The same person and month twice, or the same purchase entered twice
-     on adjacent dates — `doctor.py` warns on the first, not the second.
+   - **Double entries.** Two rows for one person in one month are normal: payments arrive
+     in parts. `doctor.py` warns when a person's rows for a month add up to more than
+     `monthlyContribution`. It does not catch the same purchase entered twice on
+     adjacent dates.
    - **Config changes.** A changed `repoUrl`, `currencySymbol` or category key affects
      every page. A removed category orphans existing expense rows.
 

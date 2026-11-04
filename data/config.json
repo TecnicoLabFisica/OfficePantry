@@ -10,7 +10,8 @@
     { "name": "Cristopher", "from": "2026-09", "to": "active" },
     { "name": "David",      "from": "2026-09", "to": "active" },
     { "name": "DanielAr",   "from": "2026-10", "to": "active" },
-    { "name": "Joel",       "from": "2026-10", "to": "active" }
+    { "name": "Joel",       "from": "2026-10", "to": "active" },
+    { "name": "Esteban",    "from": "2026-11", "to": "active" }
   ],
   "currencySymbol": "$",
   "repoUrl": "https://github.com/TecnicoLabFisica/OfficePantry",
